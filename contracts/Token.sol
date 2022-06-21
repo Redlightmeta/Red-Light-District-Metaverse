@@ -267,7 +267,7 @@ contract Token is Context, IERC20, Ownable {
         );
     }
 
-    function setSelTaxes(
+    function setSellTaxes(
         uint256 newLiquidityTax,
         uint256 newMarketingTax,
         uint256 newTeamTax
