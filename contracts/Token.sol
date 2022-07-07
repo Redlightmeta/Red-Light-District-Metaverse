@@ -30,7 +30,7 @@ contract Token is Context, IERC20, Ownable {
     string private constant _name = "Red Light District Metaverse";
     string private constant _symbol = "RLDM";
     uint256 private constant _totalSupply = 10 * 10**9 * 10**_decimals; // 10,000,000,000
-    uint8 private constant _decimals = 9;
+    uint8 private constant _decimals = 18;
 
     address payable public marketingWalletAddress =
         payable(0xaBd92e25550e68541Ea85DDfc3A6Fb9c046a9a22);
