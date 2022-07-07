@@ -74,7 +74,6 @@ contract Token is Context, IERC20, Ownable {
 
     bool inSwapAndLiquify;
     bool public swapAndLiquifyEnabled = true;
-    bool public swapAndLiquifyByLimitOnly = false;
 
     event SwapAndLiquifyEnabledUpdated(bool enabled);
 
@@ -326,10 +325,6 @@ contract Token is Context, IERC20, Ownable {
         emit SwapAndLiquifyEnabledUpdated(_enabled);
     }
 
-    function setSwapAndLiquifyByLimitOnly(bool newValue) external onlyOwner {
-        swapAndLiquifyByLimitOnly = newValue;
-    }
-
     function getCirculatingSupply() public view returns (uint256) {
         return _totalSupply.sub(balanceOf(deadAddress));
     }
@@ -406,6 +401,14 @@ contract Token is Context, IERC20, Ownable {
         if (inSwapAndLiquify) {
             return _basicTransfer(sender, recipient, amount);
         } else {
+            if (
+                !inSwapAndLiquify &&
+                !isMarketPair[sender] &&
+                swapAndLiquifyEnabled
+            ) {
+                _swapAndLiquify();
+            }
+
             _balances[sender] = _balances[sender].sub(
                 amount,
                 "Token: Insufficient Balance"
@@ -437,7 +440,11 @@ contract Token is Context, IERC20, Ownable {
         return true;
     }
 
-    function swapAndLiquify(uint256 tAmount) private lockTheSwap {
+    function _swapAndLiquify() private lockTheSwap {
+        require(msg.sender == tx.origin, "Token: msg.sender does not match with tx.origin");
+        
+        uint256 tAmount = balanceOf(address(this));
+
         uint256 tokensForLP = tAmount
             .mul(_liquidityShare)
             .div(_totalDistributionShares)
