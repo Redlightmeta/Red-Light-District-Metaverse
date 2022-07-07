@@ -77,13 +77,16 @@ contract Token is Context, IERC20, Ownable {
     bool public swapAndLiquifyByLimitOnly = false;
 
     event SwapAndLiquifyEnabledUpdated(bool enabled);
-    event SwapAndLiquify(
-        uint256 tokensSwapped,
-        uint256 ethReceived,
-        uint256 tokensIntoLiqudity
-    );
 
-    event SwapETHForTokens(uint256 amountIn, address[] path);
+    event SwapAndLiquify(
+        uint256 tokensForLP,
+        uint256 tokensForSwap,
+        uint256 amountReceived,
+        uint256 totalBNBFee,
+        uint256 amountBNBLiquidity,
+        uint256 amountBNBTeam,
+        uint256 amountBNBMarketing
+    );
 
     event SwapTokensForETH(uint256 amountIn, address[] path);
 
@@ -465,6 +468,16 @@ contract Token is Context, IERC20, Ownable {
 
         if (amountBNBLiquidity > 0 && tokensForLP > 0)
             addLiquidity(tokensForLP, amountBNBLiquidity);
+
+        emit SwapAndLiquify(
+            tokensForLP,
+            tokensForSwap,
+            amountReceived,
+            totalBNBFee,
+            amountBNBLiquidity,
+            amountBNBTeam,
+            amountBNBMarketing
+        );
     }
 
     function swapTokensForEth(uint256 tokenAmount) private {
