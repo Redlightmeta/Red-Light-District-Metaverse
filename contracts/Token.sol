@@ -15,7 +15,6 @@ pragma solidity 0.8.15;
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 import {IUniswapV2Factory} from "./utils/IUniswapV2Factory.sol";
@@ -23,7 +22,6 @@ import {IUniswapV2Router01} from "./utils/IUniswapV2Router01.sol";
 import {IUniswapV2Router02} from "./utils/IUniswapV2Router02.sol";
 
 contract Token is Context, IERC20, Ownable {
-    using SafeMath for uint256;
     using Address for address;
 
     string private constant _name = "Red Light District Metaverse";
