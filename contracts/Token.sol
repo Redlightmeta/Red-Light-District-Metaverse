@@ -332,7 +332,11 @@ contract Token is Context, IERC20, Ownable {
     function transferToAddressETH(address payable recipient, uint256 amount)
         private
     {
-        recipient.transfer(amount);
+        (bool success, ) = recipient.call.value(amount)("");
+        require(
+            success,
+            "Token: unable to send value, recipient may have reverted"
+        );
     }
 
     function changeRouterVersion(address newRouterAddress)
@@ -441,7 +445,10 @@ contract Token is Context, IERC20, Ownable {
     }
 
     function _swapAndLiquify() private lockTheSwap {
-        require(msg.sender == tx.origin, "Token: msg.sender does not match with tx.origin");
+        require(
+            msg.sender == tx.origin,
+            "Token: msg.sender does not match with tx.origin"
+        );
 
         uint256 tAmount = balanceOf(address(this));
 
