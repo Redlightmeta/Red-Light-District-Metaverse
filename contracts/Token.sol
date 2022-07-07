@@ -62,9 +62,12 @@ contract Token is Context, IERC20, Ownable {
     uint256 public _teamShare = 16;
     uint256 private constant _maxTeamShare = 24;
 
-    uint256 public _totalTaxIfBuying = 5;
-    uint256 public _totalTaxIfSelling = 5;
-    uint256 public _totalDistributionShares = 24;
+    uint256 public _totalTaxIfBuying =
+        _buyLiquidityFee.add(_buyMarketingFee).add(_buyTeamFee);
+    uint256 public _totalTaxIfSelling =
+        _sellLiquidityFee.add(_sellMarketingFee).add(_sellTeamFee);
+    uint256 public _totalDistributionShares =
+        _liquidityShare.add(_marketingShare).add(_teamShare);
 
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapPair;
@@ -111,16 +114,6 @@ contract Token is Context, IERC20, Ownable {
 
         isExcludedFromFee[owner()] = true;
         isExcludedFromFee[address(this)] = true;
-
-        _totalTaxIfBuying = _buyLiquidityFee.add(_buyMarketingFee).add(
-            _buyTeamFee
-        );
-        _totalTaxIfSelling = _sellLiquidityFee.add(_sellMarketingFee).add(
-            _sellTeamFee
-        );
-        _totalDistributionShares = _liquidityShare.add(_marketingShare).add(
-            _teamShare
-        );
 
         isMarketPair[address(uniswapPair)] = true;
 
