@@ -89,6 +89,31 @@ contract Token is Context, IERC20, Ownable {
 
     event SwapTokensForETH(uint256 amountIn, address[] path);
 
+    event Airdrop(address[] recipients, uint256[] amounts);
+    event SetMarketPairStatus(address account, bool newValue);
+    event SetIsExcludedFromFee(address account, bool newValue);
+    event SetBuyTaxes(
+        uint256 buyLiquidityFee,
+        uint256 buyMarketingFee,
+        uint256 buyTeamFee,
+        uint256 totalTaxIfBuying
+    );
+    event SetSellTaxes(
+        uint256 sellLiquidityFee,
+        uint256 sellMarketingFee,
+        uint256 sellTeamFee,
+        uint256 totalTaxIfSelling
+    );
+    event SetDistributionSettings(
+        uint256 liquidityShare,
+        uint256 marketingShare,
+        uint256 teamShare,
+        uint256 totalDistributionShares
+    );
+    event SetMarketingWalletAddress(address newAddress);
+    event SetTeamWalletAddress(address newAddress);
+    event ChangeRouterVersion(address newRouterAddress, address newPairAddress);
+
     modifier lockTheSwap() {
         inSwapAndLiquify = true;
         _;
@@ -211,9 +236,13 @@ contract Token is Context, IERC20, Ownable {
             recipients.length == amounts.length,
             "Token: recipients and amounts must be the same length"
         );
+
         for (uint256 i = 0; i < recipients.length; i++) {
-            _transfer(_msgSender(), recipients[i], amounts[i]);
+            _basicTransfer(_msgSender(), recipients[i], amounts[i]);
         }
+
+        emit Airdrop(recipients, amounts);
+
         return true;
     }
 
@@ -222,6 +251,7 @@ contract Token is Context, IERC20, Ownable {
         onlyOwner
     {
         isMarketPair[account] = newValue;
+        emit SetMarketPairStatus(account, newValue);
     }
 
     function setIsExcludedFromFee(address account, bool newValue)
@@ -229,6 +259,7 @@ contract Token is Context, IERC20, Ownable {
         onlyOwner
     {
         isExcludedFromFee[account] = newValue;
+        emit setIsExcludedFromFee(account, newValue);
     }
 
     function setBuyTaxes(
@@ -255,6 +286,13 @@ contract Token is Context, IERC20, Ownable {
 
         _totalTaxIfBuying = _buyLiquidityFee.add(_buyMarketingFee).add(
             _buyTeamFee
+        );
+
+        emit SetBuyTaxes(
+            _buyLiquidityFee,
+            _buyMarketingFee,
+            _buyTeamFee,
+            _totalTaxIfBuying
         );
     }
 
@@ -283,6 +321,13 @@ contract Token is Context, IERC20, Ownable {
         _totalTaxIfSelling = _sellLiquidityFee.add(_sellMarketingFee).add(
             _sellTeamFee
         );
+
+        emit SetSellTaxes(
+            _sellLiquidityFee,
+            _sellMarketingFee,
+            _sellTeamFee,
+            _totalTaxIfSelling
+        );
     }
 
     function setDistributionSettings(
@@ -310,14 +355,23 @@ contract Token is Context, IERC20, Ownable {
         _totalDistributionShares = _liquidityShare.add(_marketingShare).add(
             _teamShare
         );
+
+        emit SetDistributionSettings(
+            _liquidityShare,
+            _marketingShare,
+            _teamShare,
+            _totalDistributionShares
+        );
     }
 
     function setMarketingWalletAddress(address newAddress) external onlyOwner {
         marketingWalletAddress = payable(newAddress);
+        emit SetMarketingWalletAddress(newAddress);
     }
 
     function setTeamWalletAddress(address newAddress) external onlyOwner {
         teamWalletAddress = payable(newAddress);
+        emit SetTeamWalletAddress(newAddress);
     }
 
     function setSwapAndLiquifyEnabled(bool _enabled) external onlyOwner {
@@ -363,6 +417,8 @@ contract Token is Context, IERC20, Ownable {
         uniswapV2Router = _uniswapV2Router; //Set new router address
 
         isMarketPair[address(uniswapPair)] = true;
+
+        emit ChangeRouterVersion(newRouterAddress, newPairAddress);
     }
 
     // to recieve ETH from uniswapV2Router when swaping
