@@ -201,7 +201,7 @@ contract Token is Context, IERC20, Ownable {
     }
 
     function airdrop(address[] calldata recipients, uint256[] calldata amounts)
-        public
+        external
         onlyOwner
         returns (bool)
     {
@@ -216,14 +216,14 @@ contract Token is Context, IERC20, Ownable {
     }
 
     function setMarketPairStatus(address account, bool newValue)
-        public
+        external
         onlyOwner
     {
         isMarketPair[account] = newValue;
     }
 
     function setIsExcludedFromFee(address account, bool newValue)
-        public
+        external
         onlyOwner
     {
         isExcludedFromFee[account] = newValue;
@@ -318,12 +318,12 @@ contract Token is Context, IERC20, Ownable {
         teamWalletAddress = payable(newAddress);
     }
 
-    function setSwapAndLiquifyEnabled(bool _enabled) public onlyOwner {
+    function setSwapAndLiquifyEnabled(bool _enabled) external onlyOwner {
         swapAndLiquifyEnabled = _enabled;
         emit SwapAndLiquifyEnabledUpdated(_enabled);
     }
 
-    function setSwapAndLiquifyByLimitOnly(bool newValue) public onlyOwner {
+    function setSwapAndLiquifyByLimitOnly(bool newValue) external onlyOwner {
         swapAndLiquifyByLimitOnly = newValue;
     }
 
@@ -338,7 +338,7 @@ contract Token is Context, IERC20, Ownable {
     }
 
     function changeRouterVersion(address newRouterAddress)
-        public
+        external
         onlyOwner
         returns (address newPairAddress)
     {
