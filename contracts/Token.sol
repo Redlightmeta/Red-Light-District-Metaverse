@@ -35,8 +35,7 @@ contract Token is Context, IERC20, Ownable {
         payable(0xaBd92e25550e68541Ea85DDfc3A6Fb9c046a9a22);
     address payable public teamWalletAddress =
         payable(0xa76Bbe18c0819301d63C9428c2248A086A61288d);
-    address public immutable deadAddress =
-        0x000000000000000000000000000000000000dEaD;
+    address public immutable deadAddress = address(0xdead);
 
     mapping(address => uint256) _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
