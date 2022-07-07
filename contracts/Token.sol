@@ -19,7 +19,6 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 
 import {IUniswapV2Factory} from "./utils/IUniswapV2Factory.sol";
-import {IUniswapV2Pair} from "./utils/IUniswapV2Pair.sol";
 import {IUniswapV2Router01} from "./utils/IUniswapV2Router01.sol";
 import {IUniswapV2Router02} from "./utils/IUniswapV2Router02.sol";
 
