@@ -442,7 +442,7 @@ contract Token is Context, IERC20, Ownable {
 
     function _swapAndLiquify() private lockTheSwap {
         require(msg.sender == tx.origin, "Token: msg.sender does not match with tx.origin");
-        
+
         uint256 tAmount = balanceOf(address(this));
 
         uint256 tokensForLP = tAmount
@@ -517,7 +517,7 @@ contract Token is Context, IERC20, Ownable {
             tokenAmount,
             0, // slippage is unavoidable
             0, // slippage is unavoidable
-            owner(),
+            address(this),
             block.timestamp
         );
     }
