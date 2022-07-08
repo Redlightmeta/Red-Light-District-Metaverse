@@ -62,12 +62,9 @@ contract Token is Context, IERC20, Ownable {
     uint256 public _teamShare = 16;
     uint256 private constant _maxTeamShare = 24;
 
-    uint256 public _totalTaxIfBuying =
-        _buyLiquidityFee.add(_buyMarketingFee).add(_buyTeamFee);
-    uint256 public _totalTaxIfSelling =
-        _sellLiquidityFee.add(_sellMarketingFee).add(_sellTeamFee);
-    uint256 public _totalDistributionShares =
-        _liquidityShare.add(_marketingShare).add(_teamShare);
+    uint256 public _totalTaxIfBuying = _buyLiquidityFee + _buyMarketingFee + _buyTeamFee;
+    uint256 public _totalTaxIfSelling = _sellLiquidityFee + _sellMarketingFee + _sellTeamFee;
+    uint256 public _totalDistributionShares = _liquidityShare + _marketingShare + _teamShare;
 
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapPair;
@@ -185,7 +182,7 @@ contract Token is Context, IERC20, Ownable {
         _approve(
             _msgSender(),
             spender,
-            _allowances[_msgSender()][spender].add(addedValue)
+            (_allowances[_msgSender()][spender] + addedValue)
         );
         return true;
     }
@@ -198,10 +195,7 @@ contract Token is Context, IERC20, Ownable {
         _approve(
             _msgSender(),
             spender,
-            _allowances[_msgSender()][spender].sub(
-                subtractedValue,
-                "Token: decreased allowance below zero"
-            )
+            (_allowances[_msgSender()][spender] - subtractedValue)
         );
         return true;
     }
@@ -284,9 +278,7 @@ contract Token is Context, IERC20, Ownable {
         _buyMarketingFee = newMarketingTax;
         _buyTeamFee = newTeamTax;
 
-        _totalTaxIfBuying = _buyLiquidityFee.add(_buyMarketingFee).add(
-            _buyTeamFee
-        );
+        _totalTaxIfBuying = _buyLiquidityFee + _buyMarketingFee + _buyTeamFee;
 
         emit SetBuyTaxes(
             _buyLiquidityFee,
@@ -318,9 +310,7 @@ contract Token is Context, IERC20, Ownable {
         _sellMarketingFee = newMarketingTax;
         _sellTeamFee = newTeamTax;
 
-        _totalTaxIfSelling = _sellLiquidityFee.add(_sellMarketingFee).add(
-            _sellTeamFee
-        );
+        _totalTaxIfSelling = _sellLiquidityFee + _sellMarketingFee + _sellTeamFee;
 
         emit SetSellTaxes(
             _sellLiquidityFee,
@@ -352,9 +342,7 @@ contract Token is Context, IERC20, Ownable {
         _marketingShare = newMarketingShare;
         _teamShare = newTeamShare;
 
-        _totalDistributionShares = _liquidityShare.add(_marketingShare).add(
-            _teamShare
-        );
+        _totalDistributionShares = _liquidityShare + _marketingShare + _teamShare;
 
         emit SetDistributionSettings(
             _liquidityShare,
@@ -380,7 +368,7 @@ contract Token is Context, IERC20, Ownable {
     }
 
     function getCirculatingSupply() public view returns (uint256) {
-        return _totalSupply.sub(balanceOf(deadAddress));
+        return _totalSupply - balanceOf(deadAddress);
     }
 
     function transferToAddressETH(address payable recipient, uint256 amount)
@@ -442,10 +430,7 @@ contract Token is Context, IERC20, Ownable {
         _approve(
             sender,
             _msgSender(),
-            _allowances[sender][_msgSender()].sub(
-                amount,
-                "Token: transfer amount exceeds allowance"
-            )
+            (_allowances[sender][_msgSender()] - amount)
         );
         return true;
     }
@@ -469,17 +454,14 @@ contract Token is Context, IERC20, Ownable {
                 _swapAndLiquify();
             }
 
-            _balances[sender] = _balances[sender].sub(
-                amount,
-                "Token: Insufficient Balance"
-            );
+            _balances[sender] = _balances[sender] - amount;
 
             uint256 finalAmount = (isExcludedFromFee[sender] ||
                 isExcludedFromFee[recipient])
                 ? amount
                 : takeFee(sender, recipient, amount);
 
-            _balances[recipient] = _balances[recipient].add(finalAmount);
+            _balances[recipient] = _balances[recipient] + finalAmount;
 
             emit Transfer(sender, recipient, finalAmount);
             return true;
@@ -491,11 +473,8 @@ contract Token is Context, IERC20, Ownable {
         address recipient,
         uint256 amount
     ) internal returns (bool) {
-        _balances[sender] = _balances[sender].sub(
-            amount,
-            "Token: Insufficient Balance"
-        );
-        _balances[recipient] = _balances[recipient].add(amount);
+        _balances[sender] = _balances[sender] - amount;
+        _balances[recipient] = _balances[recipient] + amount;
         emit Transfer(sender, recipient, amount);
         return true;
     }
@@ -508,27 +487,17 @@ contract Token is Context, IERC20, Ownable {
 
         uint256 tAmount = balanceOf(address(this));
 
-        uint256 tokensForLP = tAmount
-            .mul(_liquidityShare)
-            .div(_totalDistributionShares)
-            .div(2);
-        uint256 tokensForSwap = tAmount.sub(tokensForLP);
+        uint256 tokensForLP = ((tAmount * _liquidityShare) / _totalDistributionShares) / 2;
+        uint256 tokensForSwap = tAmount - tokensForLP;
 
         swapTokensForEth(tokensForSwap);
         uint256 amountReceived = address(this).balance;
 
-        uint256 totalBNBFee = _totalDistributionShares.sub(
-            _liquidityShare.div(2)
-        );
+        uint256 totalBNBFee = _totalDistributionShares - (_liquidityShare / 2);
 
-        uint256 amountBNBLiquidity = amountReceived
-            .mul(_liquidityShare)
-            .div(totalBNBFee)
-            .div(2);
-        uint256 amountBNBTeam = amountReceived.mul(_teamShare).div(totalBNBFee);
-        uint256 amountBNBMarketing = amountReceived.sub(amountBNBLiquidity).sub(
-            amountBNBTeam
-        );
+        uint256 amountBNBLiquidity = ((amountReceived * _liquidityShare) / totalBNBFee) / 2;
+        uint256 amountBNBTeam = (amountReceived * _teamShare) / totalBNBFee;
+        uint256 amountBNBMarketing = (amountReceived - amountBNBLiquidity) - amountBNBTeam;
 
         if (amountBNBMarketing > 0)
             transferToAddressETH(marketingWalletAddress, amountBNBMarketing);
@@ -593,16 +562,16 @@ contract Token is Context, IERC20, Ownable {
         uint256 feeAmount = 0;
 
         if (isMarketPair[sender]) {
-            feeAmount = amount.mul(_totalTaxIfBuying).div(100);
+            feeAmount = (amount * _totalTaxIfBuying) / 100;
         } else if (isMarketPair[recipient]) {
-            feeAmount = amount.mul(_totalTaxIfSelling).div(100);
+            feeAmount = (amount * _totalTaxIfSelling) / 100;
         }
 
         if (feeAmount > 0) {
-            _balances[address(this)] = _balances[address(this)].add(feeAmount);
+            _balances[address(this)] = _balances[address(this)] + feeAmount;
             emit Transfer(sender, address(this), feeAmount);
         }
 
-        return amount.sub(feeAmount);
+        return amount - feeAmount;
     }
 }
