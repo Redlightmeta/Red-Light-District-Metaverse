@@ -328,16 +328,6 @@ contract Token is Context, IERC20, Ownable {
         return _totalSupply - balanceOf(deadAddress);
     }
 
-    function transferToAddressETH(address payable recipient, uint256 amount)
-        private
-    {
-        (bool success, ) = recipient.call{value: amount}("");
-        require(
-            success,
-            "Token: unable to send value, recipient may have reverted"
-        );
-    }
-
     function changeRouterVersion(address newRouterAddress)
         external
         onlyOwner
