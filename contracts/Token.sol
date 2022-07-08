@@ -29,10 +29,6 @@ contract Token is Context, IERC20, Ownable {
     uint256 private constant _totalSupply = 10 * 10**9 * 10**_decimals; // 10,000,000,000
     uint8 private constant _decimals = 18;
 
-    address payable public marketingWalletAddress =
-        payable(0xaBd92e25550e68541Ea85DDfc3A6Fb9c046a9a22);
-    address payable public teamWalletAddress =
-        payable(0xa76Bbe18c0819301d63C9428c2248A086A61288d);
     address public immutable deadAddress = address(0xdead);
 
     mapping(address => uint256) _balances;
@@ -41,33 +37,11 @@ contract Token is Context, IERC20, Ownable {
     mapping(address => bool) public isExcludedFromFee;
     mapping(address => bool) public isMarketPair;
 
-    uint256 public _buyLiquidityFee = 2;
-    uint256 private constant _maxBuyLiquidityFee = 5;
-    uint256 public _buyMarketingFee = 2;
-    uint256 private constant _maxBuyMarketingFee = 5;
-    uint256 public _buyTeamFee = 1;
-    uint256 private constant _maxBuyTeamFee = 5;
+    uint256 public buyTax = 5;
+    uint256 public constant maxBuyTax = 5;
 
-    uint256 public _sellLiquidityFee = 2;
-    uint256 private constant _maxSellLiquidityFee = 5;
-    uint256 public _sellMarketingFee = 2;
-    uint256 private constant _maxSellMarketingFee = 5;
-    uint256 public _sellTeamFee = 1;
-    uint256 private constant _maxSellTeamFee = 5;
-
-    uint256 public _liquidityShare = 4;
-    uint256 private constant _maxLiquidityShare = 10;
-    uint256 public _marketingShare = 4;
-    uint256 private constant _maxMarketingShare = 10;
-    uint256 public _teamShare = 16;
-    uint256 private constant _maxTeamShare = 24;
-
-    uint256 public _totalTaxIfBuying =
-        _buyLiquidityFee + _buyMarketingFee + _buyTeamFee;
-    uint256 public _totalTaxIfSelling =
-        _sellLiquidityFee + _sellMarketingFee + _sellTeamFee;
-    uint256 public _totalDistributionShares =
-        _liquidityShare + _marketingShare + _teamShare;
+    uint256 public sellTax = 5;
+    uint256 public constant maxSellTax = 5;
 
     address private constant _earlyAdoptersAddress =
         0x1182759dCEc65add7e9d892359409446Ac28CD0A;
@@ -108,45 +82,21 @@ contract Token is Context, IERC20, Ownable {
     address public uniswapPair;
 
     bool inSwapAndLiquify;
-    bool public swapAndLiquifyEnabled = true;
+    bool public swapAndLiquifyEnabled = false;
 
     event SwapAndLiquifyEnabledUpdated(bool enabled);
-
     event SwapAndLiquify(
-        uint256 tokensForLP,
-        uint256 tokensForSwap,
-        uint256 amountReceived,
-        uint256 totalBNBFee,
-        uint256 amountBNBLiquidity,
-        uint256 amountBNBTeam,
-        uint256 amountBNBMarketing
+        uint256 tokensSwapped,
+        uint256 bnbReceived,
+        uint256 tokensIntoLiqudity
     );
-
-    event SwapTokensForETH(uint256 amountIn, address[] path);
+    event SwapTokensForBnb(uint256 amountIn, address[] path);
 
     event Airdrop(address[] recipients, uint256[] amounts);
     event SetMarketPairStatus(address account, bool newValue);
     event SetIsExcludedFromFee(address account, bool newValue);
-    event SetBuyTaxes(
-        uint256 buyLiquidityFee,
-        uint256 buyMarketingFee,
-        uint256 buyTeamFee,
-        uint256 totalTaxIfBuying
-    );
-    event SetSellTaxes(
-        uint256 sellLiquidityFee,
-        uint256 sellMarketingFee,
-        uint256 sellTeamFee,
-        uint256 totalTaxIfSelling
-    );
-    event SetDistributionSettings(
-        uint256 liquidityShare,
-        uint256 marketingShare,
-        uint256 teamShare,
-        uint256 totalDistributionShares
-    );
-    event SetMarketingWalletAddress(address newAddress);
-    event SetTeamWalletAddress(address newAddress);
+    event SetBuyTax(uint256 newValue);
+    event SetSellTax(uint256 newValue);
     event ChangeRouterVersion(address newRouterAddress, address newPairAddress);
 
     modifier lockTheSwap() {
@@ -350,116 +300,23 @@ contract Token is Context, IERC20, Ownable {
         emit SetIsExcludedFromFee(account, newValue);
     }
 
-    function setBuyTaxes(
-        uint256 newLiquidityTax,
-        uint256 newMarketingTax,
-        uint256 newTeamTax
-    ) external onlyOwner {
-        require(
-            newLiquidityTax <= _maxBuyLiquidityFee,
-            "Token: buyLiquidityFee exceeds maximum value!"
-        );
-        require(
-            newMarketingTax <= _maxBuyMarketingFee,
-            "Token: buyMarketingFee exceeds maximum value!"
-        );
-        require(
-            newTeamTax <= _maxBuyTeamFee,
-            "Token: buyTeamFee exceeds maximum value!"
-        );
+    function setBuyTax(uint256 newValue) external onlyOwner {
+        require(newValue <= maxBuyTax, "Token: buyTax exceeds maximum value!");
 
-        _buyLiquidityFee = newLiquidityTax;
-        _buyMarketingFee = newMarketingTax;
-        _buyTeamFee = newTeamTax;
+        buyTax = newValue;
 
-        _totalTaxIfBuying = _buyLiquidityFee + _buyMarketingFee + _buyTeamFee;
-
-        emit SetBuyTaxes(
-            _buyLiquidityFee,
-            _buyMarketingFee,
-            _buyTeamFee,
-            _totalTaxIfBuying
-        );
+        emit SetBuyTax(buyTax);
     }
 
-    function setSellTaxes(
-        uint256 newLiquidityTax,
-        uint256 newMarketingTax,
-        uint256 newTeamTax
-    ) external onlyOwner {
+    function setSellTax(uint256 newValue) external onlyOwner {
         require(
-            newLiquidityTax <= _maxSellLiquidityFee,
-            "Token: sellLiquidityFee exceeds maximum value!"
-        );
-        require(
-            newMarketingTax <= _maxSellMarketingFee,
-            "Token: sellMarketingFee exceeds maximum value!"
-        );
-        require(
-            newTeamTax <= _maxSellTeamFee,
-            "Token: sellTeamFee exceeds maximum value!"
+            newValue <= maxSellTax,
+            "Token: sellTax exceeds maximum value!"
         );
 
-        _sellLiquidityFee = newLiquidityTax;
-        _sellMarketingFee = newMarketingTax;
-        _sellTeamFee = newTeamTax;
+        sellTax = newValue;
 
-        _totalTaxIfSelling =
-            _sellLiquidityFee +
-            _sellMarketingFee +
-            _sellTeamFee;
-
-        emit SetSellTaxes(
-            _sellLiquidityFee,
-            _sellMarketingFee,
-            _sellTeamFee,
-            _totalTaxIfSelling
-        );
-    }
-
-    function setDistributionSettings(
-        uint256 newLiquidityShare,
-        uint256 newMarketingShare,
-        uint256 newTeamShare
-    ) external onlyOwner {
-        require(
-            newLiquidityShare <= _maxLiquidityShare,
-            "Token: liquidityShare exceeds maximum value!"
-        );
-        require(
-            newMarketingShare <= _maxMarketingShare,
-            "Token: marketingShare exceeds maximum value!"
-        );
-        require(
-            newTeamShare <= _maxTeamShare,
-            "Token: teamShare exceeds maximum value!"
-        );
-
-        _liquidityShare = newLiquidityShare;
-        _marketingShare = newMarketingShare;
-        _teamShare = newTeamShare;
-
-        _totalDistributionShares =
-            _liquidityShare +
-            _marketingShare +
-            _teamShare;
-
-        emit SetDistributionSettings(
-            _liquidityShare,
-            _marketingShare,
-            _teamShare,
-            _totalDistributionShares
-        );
-    }
-
-    function setMarketingWalletAddress(address newAddress) external onlyOwner {
-        marketingWalletAddress = payable(newAddress);
-        emit SetMarketingWalletAddress(newAddress);
-    }
-
-    function setTeamWalletAddress(address newAddress) external onlyOwner {
-        teamWalletAddress = payable(newAddress);
-        emit SetTeamWalletAddress(newAddress);
+        emit SetSellTax(sellTax);
     }
 
     function setSwapAndLiquifyEnabled(bool _enabled) external onlyOwner {
@@ -509,7 +366,7 @@ contract Token is Context, IERC20, Ownable {
         emit ChangeRouterVersion(newRouterAddress, newPairAddress);
     }
 
-    // to recieve ETH from uniswapV2Router when swaping
+    // to recieve BNB from uniswapV2Router when swaping
     receive() external payable {}
 
     function transfer(address recipient, uint256 amount)
@@ -586,44 +443,32 @@ contract Token is Context, IERC20, Ownable {
         );
 
         uint256 tAmount = balanceOf(address(this));
+        if (tAmount > 0) {
+            // split the contract balance into halves
+            uint256 half = tAmount / 2;
+            uint256 otherHalf = tAmount - half;
 
-        uint256 tokensForLP = ((tAmount * _liquidityShare) /
-            _totalDistributionShares) / 2;
-        uint256 tokensForSwap = tAmount - tokensForLP;
+            // capture the contract's current BNB balance.
+            // this is so that we can capture exactly the amount of BNB that the
+            // swap creates, and not make the liquidity event include any BNB that
+            // has been manually sent to the contract
+            uint256 initialBalance = address(this).balance;
 
-        swapTokensForEth(tokensForSwap);
-        uint256 amountReceived = address(this).balance;
+            // swap tokens for BNB
+            _swapTokensForBnb(half); // <- this breaks the BNB -> RLDM swap when swap+liquify is triggered
 
-        uint256 totalBNBFee = _totalDistributionShares - (_liquidityShare / 2);
+            // how much BNB did we just swap into?
+            uint256 newBalance = address(this).balance - initialBalance;
 
-        uint256 amountBNBLiquidity = ((amountReceived * _liquidityShare) /
-            totalBNBFee) / 2;
-        uint256 amountBNBTeam = (amountReceived * _teamShare) / totalBNBFee;
-        uint256 amountBNBMarketing = (amountReceived - amountBNBLiquidity) -
-            amountBNBTeam;
+            // add liquidity to uniswap
+            _addLiquidity(otherHalf, newBalance);
 
-        if (amountBNBMarketing > 0)
-            transferToAddressETH(marketingWalletAddress, amountBNBMarketing);
-
-        if (amountBNBTeam > 0)
-            transferToAddressETH(teamWalletAddress, amountBNBTeam);
-
-        if (amountBNBLiquidity > 0 && tokensForLP > 0)
-            addLiquidity(tokensForLP, amountBNBLiquidity);
-
-        emit SwapAndLiquify(
-            tokensForLP,
-            tokensForSwap,
-            amountReceived,
-            totalBNBFee,
-            amountBNBLiquidity,
-            amountBNBTeam,
-            amountBNBMarketing
-        );
+            emit SwapAndLiquify(half, newBalance, otherHalf);
+        }
     }
 
-    function swapTokensForEth(uint256 tokenAmount) private {
-        // generate the uniswap pair path of token -> weth
+    function _swapTokensForBnb(uint256 tokenAmount) private {
+        // generate the uniswap pair path of token -> wbnb
         address[] memory path = new address[](2);
         path[0] = address(this);
         path[1] = uniswapV2Router.WETH();
@@ -633,21 +478,21 @@ contract Token is Context, IERC20, Ownable {
         // make the swap
         uniswapV2Router.swapExactTokensForETHSupportingFeeOnTransferTokens(
             tokenAmount,
-            0, // accept any amount of ETH
+            0, // accept any amount of BNB
             path,
             address(this), // The contract
             block.timestamp
         );
 
-        emit SwapTokensForETH(tokenAmount, path);
+        emit SwapTokensForBnb(tokenAmount, path);
     }
 
-    function addLiquidity(uint256 tokenAmount, uint256 ethAmount) private {
+    function _addLiquidity(uint256 tokenAmount, uint256 bnbAmount) private {
         // approve token transfer to cover all possible scenarios
         _approve(address(this), address(uniswapV2Router), tokenAmount);
 
         // add the liquidity
-        uniswapV2Router.addLiquidityETH{value: ethAmount}(
+        uniswapV2Router.addLiquidityETH{value: bnbAmount}(
             address(this),
             tokenAmount,
             0, // slippage is unavoidable
@@ -664,10 +509,10 @@ contract Token is Context, IERC20, Ownable {
     ) internal returns (uint256) {
         uint256 feeAmount = 0;
 
-        if (isMarketPair[sender]) {
-            feeAmount = (amount * _totalTaxIfBuying) / 100;
-        } else if (isMarketPair[recipient]) {
-            feeAmount = (amount * _totalTaxIfSelling) / 100;
+        if (buyTax > 0 && isMarketPair[sender]) {
+            feeAmount = (amount * buyTax) / 100;
+        } else if (sellTax > 0 && isMarketPair[recipient]) {
+            feeAmount = (amount * sellTax) / 100;
         }
 
         if (feeAmount > 0) {
