@@ -253,7 +253,7 @@ contract Token is Context, IERC20, Ownable {
         onlyOwner
     {
         isExcludedFromFee[account] = newValue;
-        emit setIsExcludedFromFee(account, newValue);
+        emit SetIsExcludedFromFee(account, newValue);
     }
 
     function setBuyTaxes(
