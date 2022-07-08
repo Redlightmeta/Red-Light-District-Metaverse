@@ -62,9 +62,12 @@ contract Token is Context, IERC20, Ownable {
     uint256 public _teamShare = 16;
     uint256 private constant _maxTeamShare = 24;
 
-    uint256 public _totalTaxIfBuying = _buyLiquidityFee + _buyMarketingFee + _buyTeamFee;
-    uint256 public _totalTaxIfSelling = _sellLiquidityFee + _sellMarketingFee + _sellTeamFee;
-    uint256 public _totalDistributionShares = _liquidityShare + _marketingShare + _teamShare;
+    uint256 public _totalTaxIfBuying =
+        _buyLiquidityFee + _buyMarketingFee + _buyTeamFee;
+    uint256 public _totalTaxIfSelling =
+        _sellLiquidityFee + _sellMarketingFee + _sellTeamFee;
+    uint256 public _totalDistributionShares =
+        _liquidityShare + _marketingShare + _teamShare;
 
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapPair;
@@ -310,7 +313,10 @@ contract Token is Context, IERC20, Ownable {
         _sellMarketingFee = newMarketingTax;
         _sellTeamFee = newTeamTax;
 
-        _totalTaxIfSelling = _sellLiquidityFee + _sellMarketingFee + _sellTeamFee;
+        _totalTaxIfSelling =
+            _sellLiquidityFee +
+            _sellMarketingFee +
+            _sellTeamFee;
 
         emit SetSellTaxes(
             _sellLiquidityFee,
@@ -342,7 +348,10 @@ contract Token is Context, IERC20, Ownable {
         _marketingShare = newMarketingShare;
         _teamShare = newTeamShare;
 
-        _totalDistributionShares = _liquidityShare + _marketingShare + _teamShare;
+        _totalDistributionShares =
+            _liquidityShare +
+            _marketingShare +
+            _teamShare;
 
         emit SetDistributionSettings(
             _liquidityShare,
@@ -487,7 +496,8 @@ contract Token is Context, IERC20, Ownable {
 
         uint256 tAmount = balanceOf(address(this));
 
-        uint256 tokensForLP = ((tAmount * _liquidityShare) / _totalDistributionShares) / 2;
+        uint256 tokensForLP = ((tAmount * _liquidityShare) /
+            _totalDistributionShares) / 2;
         uint256 tokensForSwap = tAmount - tokensForLP;
 
         swapTokensForEth(tokensForSwap);
@@ -495,9 +505,11 @@ contract Token is Context, IERC20, Ownable {
 
         uint256 totalBNBFee = _totalDistributionShares - (_liquidityShare / 2);
 
-        uint256 amountBNBLiquidity = ((amountReceived * _liquidityShare) / totalBNBFee) / 2;
+        uint256 amountBNBLiquidity = ((amountReceived * _liquidityShare) /
+            totalBNBFee) / 2;
         uint256 amountBNBTeam = (amountReceived * _teamShare) / totalBNBFee;
-        uint256 amountBNBMarketing = (amountReceived - amountBNBLiquidity) - amountBNBTeam;
+        uint256 amountBNBMarketing = (amountReceived - amountBNBLiquidity) -
+            amountBNBTeam;
 
         if (amountBNBMarketing > 0)
             transferToAddressETH(marketingWalletAddress, amountBNBMarketing);
