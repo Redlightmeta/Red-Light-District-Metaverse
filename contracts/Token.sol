@@ -69,6 +69,41 @@ contract Token is Context, IERC20, Ownable {
     uint256 public _totalDistributionShares =
         _liquidityShare + _marketingShare + _teamShare;
 
+    address private constant _earlyAdoptersAddress =
+        0x1182759dCEc65add7e9d892359409446Ac28CD0A;
+    address private constant _privateSaleAddress =
+        0x4E137eA13220EB30A8DfeC0dB9Cd6738B9C819C2;
+    address private constant _publicSaleAddress =
+        0xC8bd37B80A10903Eb92e3761521C5c20404180b6;
+    address private constant _developmentAddress =
+        0xBE02b48adAd3Fa13637DAdAaC6cBD7d3D3Ac6c4D;
+    address private constant _marketingAddress =
+        0x96F52552832ab1E99D25Ab72F33162381D20a086;
+    address private constant _reservesAddress =
+        0xA0FD44c8F06dC5A90BE71eA184777F1de5502dA4;
+    address private constant _ecosystemAddress =
+        0x7bB3736C8e45475211DC50B213238A514fE9Fb3a;
+    address private constant _liquidityAddress =
+        0x5C4a97D997a398e7764547D6a42CB9dDb683d593;
+    address private constant _teamAddress =
+        0x101A07374aE8c173Cb819c0d63C7200D6B7d49C7;
+    address private constant _advisoryAddress =
+        0x7D9869E9fbAf21b0AC0026207307CAeF60B561F3;
+    address private constant _stakingAddress =
+        0x9819b933dD98D19953a51616e5D6C20f338dBe6e;
+
+    uint16 private constant _earlyAdoptersPercent = 5;
+    uint16 private constant _privateSalePercent = 12;
+    uint16 private constant _publicSalePercent = 30;
+    uint16 private constant _developmentPercent = 6;
+    uint16 private constant _marketingPercent = 7;
+    uint16 private constant _reservesPercent = 5;
+    uint16 private constant _ecosystemPercent = 10;
+    uint16 private constant _liquidityPercent = 5;
+    uint16 private constant _teamPercent = 15;
+    uint16 private constant _advisoryPercent = 5;
+    uint16 private constant _stakingPercent = 50;
+
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapPair;
 
@@ -144,8 +179,64 @@ contract Token is Context, IERC20, Ownable {
 
         isMarketPair[address(uniswapPair)] = true;
 
-        _balances[_msgSender()] = _totalSupply;
-        emit Transfer(address(0), _msgSender(), _totalSupply);
+        uint256 stakingSupply = (_totalSupply / 100) * _stakingPercent;
+        uint256 mainSupply = _totalSupply - stakingSupply;
+
+        uint256 totalSupplyPercent = mainSupply / 100;
+
+        // Distribution: Early Adopters
+        uint256 earlyAdoptersTotal = totalSupplyPercent * _earlyAdoptersPercent;
+        _balances[_earlyAdoptersAddress] = earlyAdoptersTotal;
+        emit Transfer(address(0), _earlyAdoptersAddress, earlyAdoptersTotal);
+
+        // Distribution: Private Sale
+        uint256 privateSaleTotal = totalSupplyPercent * _privateSalePercent;
+        _balances[_privateSaleAddress] = privateSaleTotal;
+        emit Transfer(address(0), _privateSaleAddress, privateSaleTotal);
+
+        // Distribution: Public Sale
+        uint256 publicSaleTotal = totalSupplyPercent * _publicSalePercent;
+        _balances[_publicSaleAddress] = publicSaleTotal;
+        emit Transfer(address(0), _publicSaleAddress, publicSaleTotal);
+
+        // Distribution: Development
+        uint256 developmentTotal = totalSupplyPercent * _developmentPercent;
+        _balances[_developmentAddress] = developmentTotal;
+        emit Transfer(address(0), _developmentAddress, developmentTotal);
+
+        // Distribution: Marketing
+        uint256 marketingTotal = totalSupplyPercent * _marketingPercent;
+        _balances[_marketingAddress] = marketingTotal;
+        emit Transfer(address(0), _marketingAddress, marketingTotal);
+
+        // Distribution: Reserves
+        uint256 reservesTotal = totalSupplyPercent * _reservesPercent;
+        _balances[_reservesAddress] = reservesTotal;
+        emit Transfer(address(0), _reservesAddress, reservesTotal);
+
+        // Distribution: Ecosystem
+        uint256 ecosystemTotal = totalSupplyPercent * _ecosystemPercent;
+        _balances[_ecosystemAddress] = ecosystemTotal;
+        emit Transfer(address(0), _ecosystemAddress, ecosystemTotal);
+
+        // Distribution: Liquidity
+        uint256 liquidityTotal = totalSupplyPercent * _liquidityPercent;
+        _balances[_liquidityAddress] = liquidityTotal;
+        emit Transfer(address(0), _liquidityAddress, liquidityTotal);
+
+        // Distribution: Team
+        uint256 teamTotal = totalSupplyPercent * _teamPercent;
+        _balances[_teamAddress] = teamTotal;
+        emit Transfer(address(0), _teamAddress, teamTotal);
+
+        // Distribution: Advisory
+        uint256 advisoryTotal = totalSupplyPercent * _advisoryPercent;
+        _balances[_advisoryAddress] = advisoryTotal;
+        emit Transfer(address(0), _advisoryAddress, advisoryTotal);
+
+        // Distribution: Staking
+        _balances[_stakingAddress] = stakingSupply;
+        emit Transfer(address(0), _stakingAddress, stakingSupply);
     }
 
     function name() public view virtual returns (string memory) {
