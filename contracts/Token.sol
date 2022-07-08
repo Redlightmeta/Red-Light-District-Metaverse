@@ -374,7 +374,7 @@ contract Token is Context, IERC20, Ownable {
     function transferToAddressETH(address payable recipient, uint256 amount)
         private
     {
-        (bool success, ) = recipient.call.value(amount)("");
+        (bool success, ) = recipient.call{value: amount}("");
         require(
             success,
             "Token: unable to send value, recipient may have reverted"
