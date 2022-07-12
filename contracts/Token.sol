@@ -114,7 +114,7 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
          * PancakeSwap v2 Testnet Router Address: 0xD99D1c33F9fC3444f8101754aBC46c52416550D1
          */
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(
-            0xD99D1c33F9fC3444f8101754aBC46c52416550D1
+            0x10ED43C718714eb63d5aA57B78B54704E256024E
         );
 
         uniswapPair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(
