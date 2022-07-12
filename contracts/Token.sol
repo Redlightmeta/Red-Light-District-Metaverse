@@ -83,7 +83,9 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     address public uniswapPair;
 
     bool inSwapAndLiquify;
-    bool public swapAndLiquifyEnabled = false;
+    bool public swapAndLiquifyEnabled = true;
+
+    uint256 public numTokensSellToAddToLiquidity = 5 * 10**6 * 10**_decimals; // 0,05% of _totalSupply
 
     event SwapAndLiquifyEnabledUpdated(bool enabled);
     event SwapAndLiquify(
@@ -92,6 +94,7 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
         uint256 tokensIntoLiqudity
     );
     event SwapTokensForBnb(uint256 amountIn, address[] path);
+    event SetNumTokensSellToAddToLiquidity(uint256 newValue);
 
     event Airdrop(address[] recipients, uint256[] amounts);
     event SetMarketPairStatus(address account, bool newValue);
@@ -323,6 +326,18 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
         emit SwapAndLiquifyEnabledUpdated(_enabled);
     }
 
+    function setNumTokensSellToAddToLiquidity(uint256 newValue)
+        public
+        onlyOwner
+    {
+        require(
+            newValue > 0,
+            "Token: setNumTokensSellToAddToLiquidity value must be greater than zero!"
+        );
+        numTokensSellToAddToLiquidity = newValue * 10**_decimals;
+        emit SetNumTokensSellToAddToLiquidity(newValue);
+    }
+
     function getCirculatingSupply() public view returns (uint256) {
         return _totalSupply - balanceOf(deadAddress);
     }
@@ -389,30 +404,30 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     ) private nonReentrant returns (bool) {
         require(sender != address(0), "Token: transfer from the zero address");
         require(recipient != address(0), "Token: transfer to the zero address");
+        require(amount > 0, "Token: transfer amount must be greater than zero");
 
-        if (inSwapAndLiquify) {
-            return _basicTransfer(sender, recipient, amount);
-        } else {
-            if (
-                !inSwapAndLiquify &&
-                !isMarketPair[sender] &&
-                swapAndLiquifyEnabled
-            ) {
-                _swapAndLiquify();
-            }
-
-            _balances[sender] = _balances[sender] - amount;
-
-            uint256 finalAmount = (isExcludedFromFee[sender] ||
-                isExcludedFromFee[recipient])
-                ? amount
-                : takeFee(sender, recipient, amount);
-
-            _balances[recipient] = _balances[recipient] + finalAmount;
-
-            emit Transfer(sender, recipient, finalAmount);
-            return true;
+        uint256 tokenBalance = balanceOf(address(this));
+        if (
+            tokenBalance >= numTokensSellToAddToLiquidity &&
+            !inSwapAndLiquify &&
+            !isMarketPair[sender] &&
+            swapAndLiquifyEnabled
+        ) {
+            _swapAndLiquify(tokenBalance);
         }
+
+        _balances[sender] = _balances[sender] - amount;
+
+        uint256 finalAmount = (isExcludedFromFee[sender] ||
+            isExcludedFromFee[recipient])
+            ? amount
+            : takeFee(sender, recipient, amount);
+
+        _balances[recipient] = _balances[recipient] + finalAmount;
+
+        emit Transfer(sender, recipient, finalAmount);
+
+        return true;
     }
 
     function _basicTransfer(
@@ -426,35 +441,32 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
         return true;
     }
 
-    function _swapAndLiquify() private lockTheSwap {
+    function _swapAndLiquify(uint256 tokenBalance) private lockTheSwap {
         require(
             msg.sender == tx.origin,
             "Token: msg.sender does not match with tx.origin"
         );
 
-        uint256 tAmount = balanceOf(address(this));
-        if (tAmount > 0) {
-            // split the contract balance into halves
-            uint256 half = tAmount / 2;
-            uint256 otherHalf = tAmount - half;
+        // split the contract balance into halves
+        uint256 half = tokenBalance / 2;
+        uint256 otherHalf = tokenBalance - half;
 
-            // capture the contract's current BNB balance.
-            // this is so that we can capture exactly the amount of BNB that the
-            // swap creates, and not make the liquidity event include any BNB that
-            // has been manually sent to the contract
-            uint256 initialBalance = address(this).balance;
+        // capture the contract's current BNB balance.
+        // this is so that we can capture exactly the amount of BNB that the
+        // swap creates, and not make the liquidity event include any BNB that
+        // has been manually sent to the contract
+        uint256 initialBalance = address(this).balance;
 
-            // swap tokens for BNB
-            _swapTokensForBnb(half); // <- this breaks the BNB -> RLDM swap when swap+liquify is triggered
+        // swap tokens for BNB
+        _swapTokensForBnb(half); // <- this breaks the BNB -> RLDM swap when swap+liquify is triggered
 
-            // how much BNB did we just swap into?
-            uint256 newBalance = address(this).balance - initialBalance;
+        // how much BNB did we just swap into?
+        uint256 newBalance = address(this).balance - initialBalance;
 
-            // add liquidity to uniswap
-            _addLiquidity(otherHalf, newBalance);
+        // add liquidity to uniswap
+        _addLiquidity(otherHalf, newBalance);
 
-            emit SwapAndLiquify(half, newBalance, otherHalf);
-        }
+        emit SwapAndLiquify(half, newBalance, otherHalf);
     }
 
     function _swapTokensForBnb(uint256 tokenAmount) private nonReentrant {
