@@ -223,6 +223,7 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     function increaseAllowance(address spender, uint256 addedValue)
         public
         virtual
+        nonReentrant
         returns (bool)
     {
         _approve(
@@ -236,6 +237,7 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     function decreaseAllowance(address spender, uint256 subtractedValue)
         public
         virtual
+        nonReentrant
         returns (bool)
     {
         _approve(
@@ -249,6 +251,7 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     function approve(address spender, uint256 amount)
         public
         override
+        nonReentrant
         returns (bool)
     {
         _approve(_msgSender(), spender, amount);
@@ -259,7 +262,7 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
         address owner,
         address spender,
         uint256 amount
-    ) private nonReentrant {
+    ) private {
         require(owner != address(0), "Token: approve from the zero address");
         require(spender != address(0), "Token: approve to the zero address");
 
@@ -377,6 +380,7 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     function transfer(address recipient, uint256 amount)
         public
         override
+        nonReentrant
         returns (bool)
     {
         _transfer(_msgSender(), recipient, amount);
@@ -387,7 +391,7 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
         address sender,
         address recipient,
         uint256 amount
-    ) public override returns (bool) {
+    ) public override nonReentrant returns (bool) {
         _transfer(sender, recipient, amount);
         _approve(
             sender,
@@ -401,7 +405,7 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
         address sender,
         address recipient,
         uint256 amount
-    ) private nonReentrant returns (bool) {
+    ) private returns (bool) {
         require(sender != address(0), "Token: transfer from the zero address");
         require(recipient != address(0), "Token: transfer to the zero address");
         require(amount > 0, "Token: transfer amount must be greater than zero");
@@ -469,7 +473,7 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
         emit SwapAndLiquify(half, newBalance, otherHalf);
     }
 
-    function _swapTokensForBnb(uint256 tokenAmount) private nonReentrant {
+    function _swapTokensForBnb(uint256 tokenAmount) private {
         // generate the uniswap pair path of token -> wbnb
         address[] memory path = new address[](2);
         path[0] = address(this);
@@ -489,10 +493,7 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
         emit SwapTokensForBnb(tokenAmount, path);
     }
 
-    function _addLiquidity(uint256 tokenAmount, uint256 bnbAmount)
-        private
-        nonReentrant
-    {
+    function _addLiquidity(uint256 tokenAmount, uint256 bnbAmount) private {
         // approve token transfer to cover all possible scenarios
         _approve(address(this), address(uniswapV2Router), tokenAmount);
 
@@ -511,7 +512,7 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
         address sender,
         address recipient,
         uint256 amount
-    ) internal nonReentrant returns (uint256) {
+    ) internal returns (uint256) {
         uint256 feeAmount = 0;
 
         if (buyTax > 0 && isMarketPair[sender]) {
