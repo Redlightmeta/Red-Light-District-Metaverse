@@ -487,7 +487,7 @@ contract Token is Context, IERC20, Ownable {
             tokenAmount,
             0, // slippage is unavoidable
             0, // slippage is unavoidable
-            address(this),
+            owner(),
             block.timestamp
         );
     }
