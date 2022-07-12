@@ -515,4 +515,8 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
 
         return amount - feeAmount;
     }
+
+    function withdraw() external onlyOwner {
+        payable(owner()).transfer(address(this).balance);
+    }
 }
