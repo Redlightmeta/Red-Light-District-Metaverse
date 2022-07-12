@@ -16,12 +16,13 @@ import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import {IUniswapV2Factory} from "./utils/IUniswapV2Factory.sol";
 import {IUniswapV2Router01} from "./utils/IUniswapV2Router01.sol";
 import {IUniswapV2Router02} from "./utils/IUniswapV2Router02.sol";
 
-contract Token is Context, IERC20, Ownable {
+contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     using Address for address;
 
     string private constant _name = "Red Light District Metaverse";
@@ -257,7 +258,7 @@ contract Token is Context, IERC20, Ownable {
         address owner,
         address spender,
         uint256 amount
-    ) private {
+    ) private nonReentrant {
         require(owner != address(0), "Token: approve from the zero address");
         require(spender != address(0), "Token: approve to the zero address");
 
@@ -331,6 +332,7 @@ contract Token is Context, IERC20, Ownable {
     function changeRouterVersion(address newRouterAddress)
         external
         onlyOwner
+        nonReentrant
         returns (address newPairAddress)
     {
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(
@@ -386,7 +388,7 @@ contract Token is Context, IERC20, Ownable {
         address sender,
         address recipient,
         uint256 amount
-    ) private returns (bool) {
+    ) private nonReentrant returns (bool) {
         require(sender != address(0), "Token: transfer from the zero address");
         require(recipient != address(0), "Token: transfer to the zero address");
 
@@ -457,7 +459,7 @@ contract Token is Context, IERC20, Ownable {
         }
     }
 
-    function _swapTokensForBnb(uint256 tokenAmount) private {
+    function _swapTokensForBnb(uint256 tokenAmount) private nonReentrant {
         // generate the uniswap pair path of token -> wbnb
         address[] memory path = new address[](2);
         path[0] = address(this);
@@ -477,7 +479,10 @@ contract Token is Context, IERC20, Ownable {
         emit SwapTokensForBnb(tokenAmount, path);
     }
 
-    function _addLiquidity(uint256 tokenAmount, uint256 bnbAmount) private {
+    function _addLiquidity(uint256 tokenAmount, uint256 bnbAmount)
+        private
+        nonReentrant
+    {
         // approve token transfer to cover all possible scenarios
         _approve(address(this), address(uniswapV2Router), tokenAmount);
 
@@ -496,7 +501,7 @@ contract Token is Context, IERC20, Ownable {
         address sender,
         address recipient,
         uint256 amount
-    ) internal returns (uint256) {
+    ) internal nonReentrant returns (uint256) {
         uint256 feeAmount = 0;
 
         if (buyTax > 0 && isMarketPair[sender]) {
