@@ -30,7 +30,7 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     uint256 private constant _totalSupply = 10 * 10**9 * 10**_decimals; // 10,000,000,000
     uint8 private constant _decimals = 18;
 
-    address public immutable deadAddress = address(0xdead);
+    address public constant deadAddress = address(0xdead);
 
     mapping(address => uint256) _balances;
     mapping(address => mapping(address => uint256)) private _allowances;
