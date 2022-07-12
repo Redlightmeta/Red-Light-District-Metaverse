@@ -114,7 +114,7 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
          * PancakeSwap v2 Testnet Router Address: 0xD99D1c33F9fC3444f8101754aBC46c52416550D1
          */
         IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(
-            0x10ED43C718714eb63d5aA57B78B54704E256024E
+            0xD99D1c33F9fC3444f8101754aBC46c52416550D1
         );
 
         uniswapPair = IUniswapV2Factory(_uniswapV2Router.factory()).createPair(
@@ -130,58 +130,56 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
 
         isMarketPair[address(uniswapPair)] = true;
 
-        uint256 stakingSupply = (_totalSupply / 100) * _stakingPercent;
+        uint256 stakingSupply = (_totalSupply * _stakingPercent) / 100;
         uint256 mainSupply = _totalSupply - stakingSupply;
 
-        uint256 totalSupplyPercent = mainSupply / 100;
-
         // Distribution: Early Adopters
-        uint256 earlyAdoptersTotal = totalSupplyPercent * _earlyAdoptersPercent;
+        uint256 earlyAdoptersTotal = (mainSupply * _earlyAdoptersPercent) / 100;
         _balances[_earlyAdoptersAddress] = earlyAdoptersTotal;
         emit Transfer(address(0), _earlyAdoptersAddress, earlyAdoptersTotal);
 
         // Distribution: Private Sale
-        uint256 privateSaleTotal = totalSupplyPercent * _privateSalePercent;
+        uint256 privateSaleTotal = (mainSupply * _privateSalePercent) / 100;
         _balances[_privateSaleAddress] = privateSaleTotal;
         emit Transfer(address(0), _privateSaleAddress, privateSaleTotal);
 
         // Distribution: Public Sale
-        uint256 publicSaleTotal = totalSupplyPercent * _publicSalePercent;
+        uint256 publicSaleTotal = (mainSupply * _publicSalePercent) / 100;
         _balances[_publicSaleAddress] = publicSaleTotal;
         emit Transfer(address(0), _publicSaleAddress, publicSaleTotal);
 
         // Distribution: Development
-        uint256 developmentTotal = totalSupplyPercent * _developmentPercent;
+        uint256 developmentTotal = (mainSupply * _developmentPercent) / 100;
         _balances[_developmentAddress] = developmentTotal;
         emit Transfer(address(0), _developmentAddress, developmentTotal);
 
         // Distribution: Marketing
-        uint256 marketingTotal = totalSupplyPercent * _marketingPercent;
+        uint256 marketingTotal = (mainSupply * _marketingPercent) / 100;
         _balances[_marketingAddress] = marketingTotal;
         emit Transfer(address(0), _marketingAddress, marketingTotal);
 
         // Distribution: Reserves
-        uint256 reservesTotal = totalSupplyPercent * _reservesPercent;
+        uint256 reservesTotal = (mainSupply * _reservesPercent) / 100;
         _balances[_reservesAddress] = reservesTotal;
         emit Transfer(address(0), _reservesAddress, reservesTotal);
 
         // Distribution: Ecosystem
-        uint256 ecosystemTotal = totalSupplyPercent * _ecosystemPercent;
+        uint256 ecosystemTotal = (mainSupply * _ecosystemPercent) / 100;
         _balances[_ecosystemAddress] = ecosystemTotal;
         emit Transfer(address(0), _ecosystemAddress, ecosystemTotal);
 
         // Distribution: Liquidity
-        uint256 liquidityTotal = totalSupplyPercent * _liquidityPercent;
+        uint256 liquidityTotal = (mainSupply * _liquidityPercent) / 100;
         _balances[_liquidityAddress] = liquidityTotal;
         emit Transfer(address(0), _liquidityAddress, liquidityTotal);
 
         // Distribution: Team
-        uint256 teamTotal = totalSupplyPercent * _teamPercent;
+        uint256 teamTotal = (mainSupply * _teamPercent) / 100;
         _balances[_teamAddress] = teamTotal;
         emit Transfer(address(0), _teamAddress, teamTotal);
 
         // Distribution: Advisory
-        uint256 advisoryTotal = totalSupplyPercent * _advisoryPercent;
+        uint256 advisoryTotal = (mainSupply * _advisoryPercent) / 100;
         _balances[_advisoryAddress] = advisoryTotal;
         emit Transfer(address(0), _advisoryAddress, advisoryTotal);
 
