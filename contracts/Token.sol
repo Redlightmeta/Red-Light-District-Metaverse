@@ -410,28 +410,32 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
         require(recipient != address(0), "Token: transfer to the zero address");
         require(amount > 0, "Token: transfer amount must be greater than zero");
 
-        uint256 tokenBalance = balanceOf(address(this));
-        if (
-            tokenBalance >= numTokensSellToAddToLiquidity &&
-            !inSwapAndLiquify &&
-            !isMarketPair[sender] &&
-            swapAndLiquifyEnabled
-        ) {
-            _swapAndLiquify(tokenBalance);
+        if (inSwapAndLiquify) {
+            return _basicTransfer(sender, recipient, amount);
+        } else {
+            uint256 tokenBalance = balanceOf(address(this));
+            if (
+                tokenBalance >= numTokensSellToAddToLiquidity &&
+                !inSwapAndLiquify &&
+                !isMarketPair[sender] &&
+                swapAndLiquifyEnabled
+            ) {
+                _swapAndLiquify(tokenBalance);
+            }
+
+            _balances[sender] = _balances[sender] - amount;
+
+            uint256 finalAmount = (isExcludedFromFee[sender] ||
+                isExcludedFromFee[recipient])
+                ? amount
+                : takeFee(sender, recipient, amount);
+
+            _balances[recipient] = _balances[recipient] + finalAmount;
+
+            emit Transfer(sender, recipient, finalAmount);
+
+            return true;
         }
-
-        _balances[sender] = _balances[sender] - amount;
-
-        uint256 finalAmount = (isExcludedFromFee[sender] ||
-            isExcludedFromFee[recipient])
-            ? amount
-            : takeFee(sender, recipient, amount);
-
-        _balances[recipient] = _balances[recipient] + finalAmount;
-
-        emit Transfer(sender, recipient, finalAmount);
-
-        return true;
     }
 
     function _basicTransfer(
