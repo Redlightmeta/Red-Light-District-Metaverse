@@ -223,7 +223,6 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     function increaseAllowance(address spender, uint256 addedValue)
         public
         virtual
-        nonReentrant
         returns (bool)
     {
         _approve(
@@ -237,9 +236,13 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     function decreaseAllowance(address spender, uint256 subtractedValue)
         public
         virtual
-        nonReentrant
         returns (bool)
     {
+        require(
+            subtractedValue <= _allowances[_msgSender()][spender],
+            "Token: decreased allowance below zero!"
+        );
+
         _approve(
             _msgSender(),
             spender,
@@ -251,7 +254,6 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     function approve(address spender, uint256 amount)
         public
         override
-        nonReentrant
         returns (bool)
     {
         _approve(_msgSender(), spender, amount);
@@ -380,7 +382,6 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     function transfer(address recipient, uint256 amount)
         public
         override
-        nonReentrant
         returns (bool)
     {
         _transfer(_msgSender(), recipient, amount);
@@ -391,8 +392,14 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
         address sender,
         address recipient,
         uint256 amount
-    ) public override nonReentrant returns (bool) {
+    ) public override returns (bool) {
         _transfer(sender, recipient, amount);
+
+        require(
+            amount <= _allowances[sender][_msgSender()],
+            "Token: transfer amount exceeds allowance!"
+        );
+
         _approve(
             sender,
             _msgSender(),
