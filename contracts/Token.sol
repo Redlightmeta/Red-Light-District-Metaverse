@@ -30,9 +30,12 @@ contract Token is Context, IERC20, ReentrancyGuard {
     uint8 private constant _decimals = 18;
 
     address private _owner;
-    uint256 public transferOwnershipLockedTime = block.timestamp;
-    uint256 public constant transferOwnershipLockPeriod = 172800; // 48 hours
-    bool public isTransferOwnershipLocked = true;
+
+    uint256 public transferOwnershipLockedTime;
+    uint256 public constant transferOwnershipLockPeriod = 120; // 48 hours
+    bool public isTransferOwnershipLocked = false;
+
+    address public requestedNewOwner;
 
     address public constant gnosisSafeProxy =
         0x1F7F07864A9349ED94BFe518f6374d744bA9D1ad;
@@ -96,9 +99,9 @@ contract Token is Context, IERC20, ReentrancyGuard {
 
     constructor() {
         // Transfer ownership to Gnosis Safe Proxy contract
-        _transferOwnership(gnosisSafeProxy);
+        _initTransferOwnership(gnosisSafeProxy);
 
-        // Mint tokens to gnosisSafeProxy
+        // Mint tokens to Gnosis Safe Proxy contract
         _balances[gnosisSafeProxy] = _totalSupply;
         emit Transfer(address(0), gnosisSafeProxy, _totalSupply);
 
@@ -499,6 +502,11 @@ contract Token is Context, IERC20, ReentrancyGuard {
         );
 
         require(
+            newOwner != owner(),
+            "Ownable: new owner is same with current owner"
+        );
+
+        require(
             !isTransferOwnershipLocked ||
                 (isTransferOwnershipLocked &&
                     (transferOwnershipLockedTime +
@@ -513,6 +521,7 @@ contract Token is Context, IERC20, ReentrancyGuard {
         } else {
             isTransferOwnershipLocked = true;
             transferOwnershipLockedTime = block.timestamp;
+            requestedNewOwner = newOwner;
             emit OwnershipTransferRequested(
                 newOwner,
                 (transferOwnershipLockedTime + transferOwnershipLockPeriod)
@@ -520,7 +529,18 @@ contract Token is Context, IERC20, ReentrancyGuard {
         }
     }
 
+    function _initTransferOwnership(address newOwner) internal virtual {
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
+    }
+
     function _transferOwnership(address newOwner) internal virtual {
+        require(
+            requestedNewOwner == newOwner,
+            "Ownable: new owner does not match with the requested new owner"
+        );
+
         address oldOwner = _owner;
         _owner = newOwner;
         emit OwnershipTransferred(oldOwner, newOwner);
