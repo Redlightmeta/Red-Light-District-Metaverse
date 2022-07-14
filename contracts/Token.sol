@@ -14,7 +14,6 @@ pragma solidity 0.8.15;
 // Using OpenZeppelin Implementation for security
 import "@openzeppelin/contracts/utils/Context.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
@@ -22,7 +21,7 @@ import {IUniswapV2Factory} from "./utils/IUniswapV2Factory.sol";
 import {IUniswapV2Router01} from "./utils/IUniswapV2Router01.sol";
 import {IUniswapV2Router02} from "./utils/IUniswapV2Router02.sol";
 
-contract Token is Context, IERC20, Ownable, ReentrancyGuard {
+contract Token is Context, IERC20, ReentrancyGuard {
     using Address for address;
 
     string private constant _name = "Red Light District Metaverse";
@@ -30,6 +29,13 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     uint256 private constant _totalSupply = 10 * 10**9 * 10**_decimals; // 10,000,000,000
     uint8 private constant _decimals = 18;
 
+    address private _owner;
+    uint256 public transferOwnershipLockedTime = block.timestamp;
+    uint256 public constant transferOwnershipLockPeriod = 172800; // 48 hours
+    bool public isTransferOwnershipLocked = true;
+
+    address public constant gnosisSafeProxy =
+        0x1F7F07864A9349ED94BFe518f6374d744bA9D1ad;
     address public constant deadAddress = address(0xdead);
 
     mapping(address => uint256) _balances;
@@ -44,41 +50,6 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     uint256 public sellTax = 5;
     uint256 public constant maxSellTax = 5;
 
-    address private constant _earlyAdoptersAddress =
-        0x1182759dCEc65add7e9d892359409446Ac28CD0A;
-    address private constant _privateSaleAddress =
-        0x4E137eA13220EB30A8DfeC0dB9Cd6738B9C819C2;
-    address private constant _publicSaleAddress =
-        0xC8bd37B80A10903Eb92e3761521C5c20404180b6;
-    address private constant _developmentAddress =
-        0xBE02b48adAd3Fa13637DAdAaC6cBD7d3D3Ac6c4D;
-    address private constant _marketingAddress =
-        0x96F52552832ab1E99D25Ab72F33162381D20a086;
-    address private constant _reservesAddress =
-        0xA0FD44c8F06dC5A90BE71eA184777F1de5502dA4;
-    address private constant _ecosystemAddress =
-        0x7bB3736C8e45475211DC50B213238A514fE9Fb3a;
-    address private constant _liquidityAddress =
-        0x5C4a97D997a398e7764547D6a42CB9dDb683d593;
-    address private constant _teamAddress =
-        0x101A07374aE8c173Cb819c0d63C7200D6B7d49C7;
-    address private constant _advisoryAddress =
-        0x7D9869E9fbAf21b0AC0026207307CAeF60B561F3;
-    address private constant _stakingAddress =
-        0x9819b933dD98D19953a51616e5D6C20f338dBe6e;
-
-    uint16 private constant _earlyAdoptersPercent = 5;
-    uint16 private constant _privateSalePercent = 12;
-    uint16 private constant _publicSalePercent = 30;
-    uint16 private constant _developmentPercent = 6;
-    uint16 private constant _marketingPercent = 7;
-    uint16 private constant _reservesPercent = 5;
-    uint16 private constant _ecosystemPercent = 10;
-    uint16 private constant _liquidityPercent = 5;
-    uint16 private constant _teamPercent = 15;
-    uint16 private constant _advisoryPercent = 5;
-    uint16 private constant _stakingPercent = 50;
-
     IUniswapV2Router02 public uniswapV2Router;
     address public uniswapPair;
 
@@ -86,6 +57,15 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     bool public swapAndLiquifyEnabled = true;
 
     uint256 public numTokensSellToAddToLiquidity = 5 * 10**6 * 10**_decimals; // 0,05% of _totalSupply
+
+    event OwnershipTransferRequested(
+        address indexed newOwner,
+        uint256 releaseTime
+    );
+    event OwnershipTransferred(
+        address indexed previousOwner,
+        address indexed newOwner
+    );
 
     event SwapAndLiquifyEnabledUpdated(bool enabled);
     event SwapAndLiquify(
@@ -102,6 +82,11 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     event SetBuyTax(uint256 newValue);
     event SetSellTax(uint256 newValue);
     event ChangeRouterVersion(address newRouterAddress, address newPairAddress);
+
+    modifier onlyOwner() {
+        require(owner() == _msgSender(), "Ownable: caller is not the owner");
+        _;
+    }
 
     modifier lockTheSwap() {
         inSwapAndLiquify = true;
@@ -133,62 +118,15 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
 
         isMarketPair[address(uniswapPair)] = true;
 
-        uint256 stakingSupply = (_totalSupply * _stakingPercent) / 100;
-        uint256 mainSupply = _totalSupply - stakingSupply;
+        // Mint tokens to msg.sender
+        _balances[_msgSender()] = _totalSupply;
+        emit Transfer(address(0), owner(), _totalSupply);
 
-        // Distribution: Early Adopters
-        uint256 earlyAdoptersTotal = (mainSupply * _earlyAdoptersPercent) / 100;
-        _balances[_earlyAdoptersAddress] = earlyAdoptersTotal;
-        emit Transfer(address(0), _earlyAdoptersAddress, earlyAdoptersTotal);
+        // Transfer all tokens to Gnosis Safe Proxy contract
+        _basicTransfer(_msgSender(), gnosisSafeProxy, _totalSupply);
 
-        // Distribution: Private Sale
-        uint256 privateSaleTotal = (mainSupply * _privateSalePercent) / 100;
-        _balances[_privateSaleAddress] = privateSaleTotal;
-        emit Transfer(address(0), _privateSaleAddress, privateSaleTotal);
-
-        // Distribution: Public Sale
-        uint256 publicSaleTotal = (mainSupply * _publicSalePercent) / 100;
-        _balances[_publicSaleAddress] = publicSaleTotal;
-        emit Transfer(address(0), _publicSaleAddress, publicSaleTotal);
-
-        // Distribution: Development
-        uint256 developmentTotal = (mainSupply * _developmentPercent) / 100;
-        _balances[_developmentAddress] = developmentTotal;
-        emit Transfer(address(0), _developmentAddress, developmentTotal);
-
-        // Distribution: Marketing
-        uint256 marketingTotal = (mainSupply * _marketingPercent) / 100;
-        _balances[_marketingAddress] = marketingTotal;
-        emit Transfer(address(0), _marketingAddress, marketingTotal);
-
-        // Distribution: Reserves
-        uint256 reservesTotal = (mainSupply * _reservesPercent) / 100;
-        _balances[_reservesAddress] = reservesTotal;
-        emit Transfer(address(0), _reservesAddress, reservesTotal);
-
-        // Distribution: Ecosystem
-        uint256 ecosystemTotal = (mainSupply * _ecosystemPercent) / 100;
-        _balances[_ecosystemAddress] = ecosystemTotal;
-        emit Transfer(address(0), _ecosystemAddress, ecosystemTotal);
-
-        // Distribution: Liquidity
-        uint256 liquidityTotal = (mainSupply * _liquidityPercent) / 100;
-        _balances[_liquidityAddress] = liquidityTotal;
-        emit Transfer(address(0), _liquidityAddress, liquidityTotal);
-
-        // Distribution: Team
-        uint256 teamTotal = (mainSupply * _teamPercent) / 100;
-        _balances[_teamAddress] = teamTotal;
-        emit Transfer(address(0), _teamAddress, teamTotal);
-
-        // Distribution: Advisory
-        uint256 advisoryTotal = (mainSupply * _advisoryPercent) / 100;
-        _balances[_advisoryAddress] = advisoryTotal;
-        emit Transfer(address(0), _advisoryAddress, advisoryTotal);
-
-        // Distribution: Staking
-        _balances[_stakingAddress] = stakingSupply;
-        emit Transfer(address(0), _stakingAddress, stakingSupply);
+        // Transfer ownership to Gnosis Safe Proxy contract
+        _transferOwnership(gnosisSafeProxy);
     }
 
     function name() public view virtual returns (string memory) {
@@ -211,13 +149,17 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
         return _balances[account];
     }
 
-    function allowance(address owner, address spender)
+    function owner() public view virtual returns (address) {
+        return _owner;
+    }
+
+    function allowance(address owner_, address spender)
         public
         view
         override
         returns (uint256)
     {
-        return _allowances[owner][spender];
+        return _allowances[owner_][spender];
     }
 
     function increaseAllowance(address spender, uint256 addedValue)
@@ -261,15 +203,15 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
     }
 
     function _approve(
-        address owner,
+        address owner_,
         address spender,
         uint256 amount
     ) private {
-        require(owner != address(0), "Token: approve from the zero address");
+        require(owner_ != address(0), "Token: approve from the zero address");
         require(spender != address(0), "Token: approve to the zero address");
 
-        _allowances[owner][spender] = amount;
-        emit Approval(owner, spender, amount);
+        _allowances[owner_][spender] = amount;
+        emit Approval(owner_, spender, amount);
     }
 
     function airdrop(address[] calldata recipients, uint256[] calldata amounts)
@@ -542,5 +484,48 @@ contract Token is Context, IERC20, Ownable, ReentrancyGuard {
 
     function withdraw() external onlyOwner {
         payable(owner()).transfer(address(this).balance);
+    }
+
+    function renounceOwnership() public virtual onlyOwner {
+        _transferOwnership(address(0));
+    }
+
+    function transferOwnership(address newOwner)
+        public
+        virtual
+        onlyOwner
+        nonReentrant
+    {
+        require(
+            newOwner != address(0),
+            "Ownable: new owner is the zero address"
+        );
+
+        require(
+            !isTransferOwnershipLocked ||
+                (isTransferOwnershipLocked &&
+                    (transferOwnershipLockedTime +
+                        transferOwnershipLockPeriod) <=
+                    block.timestamp),
+            "Ownable: transferOwnership is locked"
+        );
+
+        if (isTransferOwnershipLocked) {
+            _transferOwnership(newOwner);
+            isTransferOwnershipLocked = false;
+        } else {
+            isTransferOwnershipLocked = true;
+            transferOwnershipLockedTime = block.timestamp;
+            emit OwnershipTransferRequested(
+                newOwner,
+                (transferOwnershipLockedTime + transferOwnershipLockPeriod)
+            );
+        }
+    }
+
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = _owner;
+        _owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
     }
 }
