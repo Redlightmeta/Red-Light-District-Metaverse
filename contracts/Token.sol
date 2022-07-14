@@ -95,6 +95,13 @@ contract Token is Context, IERC20, ReentrancyGuard {
     }
 
     constructor() {
+        // Transfer ownership to Gnosis Safe Proxy contract
+        _transferOwnership(gnosisSafeProxy);
+
+        // Mint tokens to gnosisSafeProxy
+        _balances[gnosisSafeProxy] = _totalSupply;
+        emit Transfer(address(0), gnosisSafeProxy, _totalSupply);
+
         /**
          * @dev Routers config for PancakeSwap
          *
@@ -117,16 +124,6 @@ contract Token is Context, IERC20, ReentrancyGuard {
         isExcludedFromFee[address(this)] = true;
 
         isMarketPair[address(uniswapPair)] = true;
-
-        // Mint tokens to msg.sender
-        _balances[_msgSender()] = _totalSupply;
-        emit Transfer(address(0), owner(), _totalSupply);
-
-        // Transfer all tokens to Gnosis Safe Proxy contract
-        _basicTransfer(_msgSender(), gnosisSafeProxy, _totalSupply);
-
-        // Transfer ownership to Gnosis Safe Proxy contract
-        _transferOwnership(gnosisSafeProxy);
     }
 
     function name() public view virtual returns (string memory) {
